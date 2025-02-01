@@ -40,6 +40,7 @@ requests_log = []
 @app.route('/')
 def home():
     """Ana sayfa: Gelen istekleri liste olarak göster."""
+    print("Gelen İstekler:", requests_log)
     return render_template("index.html", logs=requests_log)
 
 # ---------------------- DISCORD BOT OLAYLARI ---------------------- #

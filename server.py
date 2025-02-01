@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import discord
 from discord.ext import commands
 import asyncio
@@ -34,11 +34,13 @@ client = Client(TOKEN_BINANCEFIRST, TOKEN_BINANCESECOND, testnet=True)
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-@app.route('/', methods=['GET', 'POST'])
+# Gelen istekleri saklamak için bir liste
+requests_log = []
+
+@app.route('/')
 def home():
-    log_data = f"Method: {request.method}, Headers: {dict(request.headers)}, Body: {request.data.decode('utf-8')}"
-    logging.info(log_data)  # aaStore logs in 'server.log'
-    return jsonify({"message": "Request logged."})
+    """Ana sayfa: Gelen istekleri liste olarak göster."""
+    return render_template("index.html", logs=requests_log)
 
 # ---------------------- DISCORD BOT OLAYLARI ---------------------- #
 
@@ -81,6 +83,15 @@ def webhook():
             action = data.get("action")
             symbol = data.get("symbol", "BTCUSDT")
             amount = data.get("amount", 0.1)
+
+            # Web arayüzünde gösterilecek veriyi sakla
+            requests_log.insert(0, {
+                "action": action,
+                "symbol": symbol,
+                "amount": amount,
+                "headers": dict(request.headers),
+                "body": data
+            })
 
             if action == "BUY":
                 order = client.order_market_buy(symbol=symbol, quantity=amount)

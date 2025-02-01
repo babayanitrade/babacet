@@ -2,115 +2,108 @@ from flask import Flask, request, jsonify
 import discord
 from discord.ext import commands
 import asyncio
-import ast  # Python literal değerlendirmesi için
+import ast  # For safely parsing literal data
 from binance.client import Client
-from binance.enums import *
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
-# from alpaca.trading.requests import MarketOrderRequest
-# from alpaca.trading.enums import OrderSide, TimeInForce
+# Load environment variables
+load_dotenv()
 
-# from alpaca.trading.client import TradingClient
+# Fetch API keys securely
+TOKEN_BINANCEFIRST = os.getenv("TOKEN_BINANCEFIRST")
+TOKEN_BINANCESECOND = os.getenv("TOKEN_BINANCESECOND")
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", 0))  # Ensure it's an integer
+print(f"DISCORD_BOT_TOKEN: {DISCORD_BOT_TOKEN}")
 
-# from pybit.unified_trading import HTTP
-# session = HTTP(testnet=True)
-# print(session.get_kline(
-#     category="inverse",
-#     symbol="BTCUSD",
-#     interval=60,
-#     start=1670601600000,
-#     end=1670608800000,
-# ))
+# Verify tokens before starting
+if not DISCORD_BOT_TOKEN:
+    raise ValueError("ERROR: DISCORD_BOT_TOKEN is missing! Check your .env file.")
+
+if not TOKEN_BINANCEFIRST or not TOKEN_BINANCESECOND:
+    raise ValueError("ERROR: Binance API keys are missing! Check your .env file.")
+
+# Initialize Flask app
 app = Flask(__name__)
 
-# Discord bot istemcisi
+# Initialize Binance Client
+client = Client(TOKEN_BINANCEFIRST, TOKEN_BINANCESECOND, testnet=True)
+
+# Setup Discord bot with proper intents
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-TOKEN_BINANCEFIRST = os.getenv("TOKEN_BINANCEFIRST")
-TOKEN_BINANCESECOND = os.getenv("TOKEN_BINANCESECOND")
+# ---------------------- DISCORD BOT EVENTS ---------------------- #
 
-client = Client(TOKEN_BINANCESECOND, TOKEN_BINANCESECOND, testnet=True)
-
-load_dotenv()
-DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-CHANNEL_ID = 1258161138496045096  # Mesaj göndermek istediğiniz kanalın ID'si
-
-# Discord bot başlatıcı
 @bot.event
 async def on_ready():
-    print(f"Bot başarıyla giriş yaptı: {bot.user.name}")
+    """Triggers when the bot starts."""
+    print(f"✅ Bot is online: {bot.user.name}")
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
-        await channel.send("🚀 Test: Bybit botu çalışmaya başladı!")
+        await channel.send("🚀 Bot has started successfully!")
 
-# Discord'da mesaj göndermek için bir yardımcı coroutine
 async def send_discord_message(message):
+    """Helper function to send messages to Discord."""
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send(message)
 
-# Flask webhook endpoint
+# ---------------------- FLASK WEBHOOK ---------------------- #
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    """Handles incoming webhook data."""
     try:
-        print("=== Gelen Webhook ===")
+        print("=== Incoming Webhook ===")
         print("Headers:", request.headers)
         print("Body (raw):", request.data)
 
-        # Gelen ham veriyi Python dict'e dönüştür
         raw_data = request.data.decode('utf-8')
+
+        # Safely parse incoming JSON data
         try:
-            # Python dict formatında gelen string veriyi ayrıştır
             data = ast.literal_eval(raw_data)
         except (ValueError, SyntaxError) as e:
-            print(f"Veriyi ayrıştırma hatası: {e}")
-            return jsonify({"success": False, "message": "Geçersiz veri formatı"}), 400
+            print(f"❌ Error parsing data: {e}")
+            return jsonify({"success": False, "message": "Invalid data format"}), 400
 
         print("Parsed Data:", data)
-        print("=====================")
 
         if data:
-            
-            # BUY işlemi kontrolü
-            if data.get('action') == "BUY":
-                order = client.order_market_buy(symbol='BTCUSDT',quantity=0.1)
-                balance = client.get_asset_balance(asset='BTC')
-                message = f"📈 **BUY Alert**\nBalance: {balance}\nSymbol: {data.get('symbol')}\nAmount: {data.get('amount')}\nStrategy: {data.get('strategy')}\nINVRSI: {data.get('INVRSI')}\nINVSTOCH: {data.get('INVSTOCH')}\nCCI: {data.get('CCI')}\nRSI: {data.get('RSI')}"
-                # Discord botunun event loop'una mesaj gönder
-                asyncio.run_coroutine_threadsafe(
-                    send_discord_message(message), bot.loop
-                )
+            action = data.get("action")
+            symbol = data.get("symbol", "BTCUSDT")
+            amount = data.get("amount", 0.1)
 
-            # SELL işlemi kontrolü
-            elif data.get('action') == "SELL":
-                order = client.order_market_sell(symbol='BTCUSDT',quantity=0.1)
-                balance = client.get_asset_balance(asset='BTC')
-                message = f"📈 **SELL Alert**\nBalance: {balance}\nSymbol: {data.get('symbol')}\nAmount: {data.get('amount')}\nStrategy: {data.get('strategy')}\nINVRSI: {data.get('INVRSI')}\nINVSTOCH: {data.get('INVSTOCH')}\nCCI: {data.get('CCI')}\nRSI: {data.get('RSI')}"
-                # Discord botunun event loop'una mesaj gönder
-                asyncio.run_coroutine_threadsafe(
-                    send_discord_message(message), bot.loop
-                )
+            if action == "BUY":
+                order = client.order_market_buy(symbol=symbol, quantity=amount)
+                balance = client.get_asset_balance(asset=symbol[:-4])  # Extract asset symbol
+                message = f"📈 **BUY Alert**\nBalance: {balance}\nSymbol: {symbol}\nAmount: {amount}"
+                asyncio.run_coroutine_threadsafe(send_discord_message(message), bot.loop)
 
-        return jsonify({"success": True, "message": "Webhook işlendi"})
+            elif action == "SELL":
+                order = client.order_market_sell(symbol=symbol, quantity=amount)
+                balance = client.get_asset_balance(asset=symbol[:-4])  # Extract asset symbol
+                message = f"📉 **SELL Alert**\nBalance: {balance}\nSymbol: {symbol}\nAmount: {amount}"
+                asyncio.run_coroutine_threadsafe(send_discord_message(message), bot.loop)
+
+        return jsonify({"success": True, "message": "Webhook processed successfully"})
 
     except Exception as e:
-        print("Hata:", str(e))
+        print(f"❌ Error: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 400
 
-# Flask ve Discord'u aynı anda çalıştırmak için birleştirilmiş asenkron yapı
+# ---------------------- ASYNC SERVER RUNNER ---------------------- #
+
 async def start():
-    # Discord botunu başlat
-    bot_task = asyncio.create_task(bot.start(DISCORD_TOKEN))
-
-    # Flask uygulamasını başlat
+    """Runs both Flask and Discord bot in parallel."""
+    bot_task = asyncio.create_task(bot.start(DISCORD_BOT_TOKEN))
     app_task = asyncio.to_thread(app.run, host="0.0.0.0", port=8080)
-
-    # Her iki görevi aynı anda çalıştır
     await asyncio.gather(bot_task, app_task)
 
-# Ana çalışma bloğu
+# ---------------------- MAIN ENTRY POINT ---------------------- #
+
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

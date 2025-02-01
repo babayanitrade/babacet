@@ -5,6 +5,8 @@ import asyncio
 import ast  # Python literal değerlendirmesi için
 from binance.client import Client
 from binance.enums import *
+import os
+from dotenv import load_dotenv
 
 # from alpaca.trading.requests import MarketOrderRequest
 # from alpaca.trading.enums import OrderSide, TimeInForce
@@ -30,8 +32,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 client = Client("WgXTEAHnnkM9soZvxIwIxCf1AJfjeRWpFgAnbBN63q5gog7kNXJDLerrtFfwDTlu", "ArakDsk7LKmoXBBaTNAvTjfRND06WePK4KUl9T3oZ8ZrDKL8fDeOiVm3XoHeOsNp", testnet=True)
 
-# Discord bot token ve kanal ID'si
-DISCORD_TOKEN = "MTMzMTg5NDYxNDgzMDg3NDYzNA.GXshYn.s47WG065P2qNL_XYMTt9G3NiMrT9uFCyiJ74MM"  # Buraya kendi Discord bot token'ınızı ekleyin
+load_dotenv()
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 CHANNEL_ID = 1258161138496045096  # Mesaj göndermek istediğiniz kanalın ID'si
 
 # Discord bot başlatıcı

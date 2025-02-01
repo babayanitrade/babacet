@@ -81,8 +81,8 @@ def webhook():
 
         if data:
             action = data.get("action")
-            symbol = data.get("symbol", "BTCUSDT")
-            amount = data.get("amount", 0.1)
+            symbol = data.get("symbol")
+            amount = data.get("amount")
 
             # Web arayüzünde gösterilecek veriyi sakla
             requests_log.insert(0, {
@@ -95,13 +95,13 @@ def webhook():
 
             if action == "BUY":
                 order = client.order_market_buy(symbol=symbol, quantity=amount)
-                balance = client.get_asset_balance(asset=symbol[:-4])  # Sembolü çıkart
+                balance = client.get_asset_balance(asset="XRP")  # Sembolü çıkart
                 message = f"📈 **ALIM EMRİ**\nBakiye: {balance}\nSembol: {symbol}\nMiktar: {amount}"
                 asyncio.run_coroutine_threadsafe(send_discord_message(message), bot.loop)
 
             elif action == "SELL":
                 order = client.order_market_sell(symbol=symbol, quantity=amount)
-                balance = client.get_asset_balance(asset=symbol[:-4])  # Sembolü çıkart
+                balance = client.get_asset_balance(asset="XRP")  # Sembolü çıkart
                 message = f"📉 **SATIM EMRİ**\nBakiye: {balance}\nSembol: {symbol}\nMiktar: {amount}"
                 asyncio.run_coroutine_threadsafe(send_discord_message(message), bot.loop)
 

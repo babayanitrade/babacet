@@ -28,12 +28,13 @@ app = Flask(__name__)
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+TOKEN_BINANCEFIRST = os.getenv("TOKEN_BINANCEFIRST")
+TOKEN_BINANCESECOND = os.getenv("TOKEN_BINANCESECOND")
 
-
-client = Client("WgXTEAHnnkM9soZvxIwIxCf1AJfjeRWpFgAnbBN63q5gog7kNXJDLerrtFfwDTlu", "ArakDsk7LKmoXBBaTNAvTjfRND06WePK4KUl9T3oZ8ZrDKL8fDeOiVm3XoHeOsNp", testnet=True)
+client = Client(TOKEN_BINANCESECOND, TOKEN_BINANCESECOND, testnet=True)
 
 load_dotenv()
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 CHANNEL_ID = 1258161138496045096  # Mesaj göndermek istediğiniz kanalın ID'si
 
 # Discord bot başlatıcı

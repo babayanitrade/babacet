@@ -37,7 +37,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @app.route('/', methods=['GET', 'POST'])
 def home():
     log_data = f"Method: {request.method}, Headers: {dict(request.headers)}, Body: {request.data.decode('utf-8')}"
-    logging.info(log_data)  # Store logs in 'server.log'
+    logging.info(log_data)  # aaStore logs in 'server.log'
     return jsonify({"message": "Request logged."})
 
 # ---------------------- DISCORD BOT OLAYLARI ---------------------- #
